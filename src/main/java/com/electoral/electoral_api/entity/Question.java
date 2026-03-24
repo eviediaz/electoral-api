@@ -4,9 +4,13 @@ import com.electoral.electoral_api.entity.catalog.CatQuestionFormat;
 import com.electoral.electoral_api.entity.catalog.CatQuestionTone;
 import com.electoral.electoral_api.entity.catalog.CatQuestionTopic;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "question")
 public class Question {
@@ -20,54 +24,17 @@ public class Question {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_topic")
-    private CatQuestionTopic idTopic;
+    private CatQuestionTopic topic;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_tone")
-    private CatQuestionTone idTone;
+    private CatQuestionTone tone;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_format")
-    private CatQuestionFormat idFormat;
+    private CatQuestionFormat format;
 
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public void setText(String text) {
-        this.text = text;
-    }
-
-    public CatQuestionTopic getIdTopic() {
-        return idTopic;
-    }
-
-    public void setIdTopic(CatQuestionTopic idTopic) {
-        this.idTopic = idTopic;
-    }
-
-    public CatQuestionTone getIdTone() {
-        return idTone;
-    }
-
-    public void setIdTone(CatQuestionTone idTone) {
-        this.idTone = idTone;
-    }
-
-    public CatQuestionFormat getIdFormat() {
-        return idFormat;
-    }
-
-    public void setIdFormat(CatQuestionFormat idFormat) {
-        this.idFormat = idFormat;
-    }
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_option_set")
+    private OptionSet optionSet;
 }

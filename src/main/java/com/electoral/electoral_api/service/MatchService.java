@@ -1,11 +1,10 @@
 package com.electoral.electoral_api.service;
 
+import org.springframework.transaction.annotation.Transactional;
 import com.electoral.electoral_api.dto.AnswerRequestDTO;
 import com.electoral.electoral_api.dto.MatchResultDTO;
-import com.electoral.electoral_api.entity.Candidate;
-import com.electoral.electoral_api.entity.CandidateSource;
-import com.electoral.electoral_api.repository.CandidateRepository;
-import com.electoral.electoral_api.repository.CandidateSourceRepository;
+import com.electoral.electoral_api.entity.*;
+import com.electoral.electoral_api.repository.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -18,28 +17,93 @@ public class MatchService {
     private final CandidateRepository candidateRepository;
     private final CandidateSourceRepository candidateSourceRepository;
     private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
+    private final QuestionRepository questionRepository;
+    private final OptionSetItemRepository optionSetItemRepository;
+    private final UserAnswerRepository userAnswerRepository;
 
     public MatchService(CandidateRepository candidateRepository,
                         CandidateSourceRepository candidateSourceRepository,
-                        ObjectMapper objectMapper) {
+                        ObjectMapper objectMapper,
+                        UserRepository userRepository,
+                        QuestionRepository questionRepository,
+                        OptionSetItemRepository optionSetItemRepository,
+                        UserAnswerRepository userAnswerRepository) {
         this.candidateRepository = candidateRepository;
         this.candidateSourceRepository = candidateSourceRepository;
         this.objectMapper = objectMapper;
+        this.userRepository = userRepository;
+        this.questionRepository = questionRepository;
+        this.optionSetItemRepository = optionSetItemRepository;
+        this.userAnswerRepository = userAnswerRepository;
     }
 
+    private String mapTopicCode(String code) {
+        Map<String, String> topicMap = Map.of(
+                "se", "seguridad",
+                "ec", "economia",
+                "sa", "salud",
+                "ed", "educacion",
+                "ju", "justicia"
+        );
+        return topicMap.getOrDefault(code.toLowerCase(), code);
+    }
+
+    private void saveUserAnswers(AnswerRequestDTO request) {
+        // Busca el usuario
+            User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        for (AnswerRequestDTO.AnswerItemDTO answerItem : request.getAnswers()) {
+            // Busca la pregunta
+            Question question = questionRepository.findById(answerItem.getQuestionId())
+                    .orElseThrow(() -> new RuntimeException("Pregunta no encontrada"));
+
+            // Busca la opción seleccionada
+            OptionSetItem optionSetItem = optionSetItemRepository
+                    .findById(answerItem.getOptionId().shortValue())
+                    .orElseThrow(() -> new RuntimeException("Opción no encontrada"));
+
+            // Verifica si ya existe una respuesta previa para esta pregunta
+            Optional<UserAnswer> existing = userAnswerRepository
+                    .findByUser_IdAndQuestion_Id(request.getUserId(), answerItem.getQuestionId());
+
+            if (existing.isPresent()) {
+                // Actualiza la respuesta existente
+                UserAnswer answer = existing.get();
+                answer.setOptionSelected(optionSetItem);
+                userAnswerRepository.save(answer);
+            } else {
+                // Crea una nueva respuesta
+                UserAnswer answer = new UserAnswer();
+                answer.setUser(user);
+                answer.setQuestion(question);
+                answer.setOptionSelected(optionSetItem);
+                userAnswerRepository.save(answer);
+            }
+        }
+    }
+
+    @Transactional
     public List<MatchResultDTO> calculateMatch(AnswerRequestDTO request) {
+        saveUserAnswers(request);
+
+        List<UserAnswer> allAnswers = userAnswerRepository
+                .findAllWithDetailsByUserId(request.getUserId());
+
         // 1. Agrupar respuestas del usuario por tema
-        Map<String, Integer> userValuesByTopic = new HashMap<>();
-        for (AnswerRequestDTO.AnswerItemDTO answer : request.getAnswers()) {
-            userValuesByTopic.merge(answer.getTopic(), answer.getValue(), Integer::sum);
+        Map<String, List<Integer>> topicValues = new HashMap<>();
+
+        for (UserAnswer answer : allAnswers) {
+            if (answer.getQuestion().getTopic() == null) continue;
+
+            String topicCode = answer.getQuestion().getTopic().getCode().toLowerCase();
+            int value = answer.getOptionSelected().getValue();
+
+            topicValues.computeIfAbsent(topicCode, k -> new ArrayList<>())
+                    .add(value);
         }
 
-        // Normalizar a promedio por tema
-        Map<String, List<Integer>> topicValues = new HashMap<>();
-        for (AnswerRequestDTO.AnswerItemDTO answer : request.getAnswers()) {
-            topicValues.computeIfAbsent(answer.getTopic(), k -> new ArrayList<>())
-                    .add(answer.getValue());
-        }
         Map<String, Double> userAvgByTopic = new HashMap<>();
         topicValues.forEach((topic, values) ->
                 userAvgByTopic.put(topic, values.stream()
@@ -80,7 +144,7 @@ public class MatchService {
                 int topicCount = 0;
 
                 for (Map.Entry<String, Double> entry : userAvgByTopic.entrySet()) {
-                    String topic = entry.getKey();
+                    String topic = mapTopicCode(entry.getKey());
                     Double userValue = entry.getValue();
 
                     Object topicObj = contentMap.get(topic);
@@ -126,8 +190,9 @@ public class MatchService {
             }
         }
 
-        // 6. Ordenar por score descendente y devolver top 3
         results.sort((a, b) -> Double.compare(b.getAffinityScore(), a.getAffinityScore()));
         return results.size() > 3 ? results.subList(0, 3) : results;
     }
+
+
 }

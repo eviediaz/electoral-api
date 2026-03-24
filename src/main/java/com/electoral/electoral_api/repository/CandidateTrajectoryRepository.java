@@ -8,5 +8,5 @@ import java.util.UUID;
 
 @Repository
 public interface CandidateTrajectoryRepository extends JpaRepository<CandidateTrajectory, UUID> {
-    List<CandidateTrajectory> findByIdCandidateOrderByStartDateDesc(UUID candidateId);
+    List<CandidateTrajectory> findByCandidate_IdOrderByStartDateDesc(UUID candidateId);
 }

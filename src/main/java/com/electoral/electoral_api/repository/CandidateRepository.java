@@ -1,7 +1,6 @@
 package com.electoral.electoral_api.repository;
 
 import com.electoral.electoral_api.entity.Candidate;
-import com.electoral.electoral_api.entity.catalog.CatCandidateType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;

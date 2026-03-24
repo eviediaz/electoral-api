@@ -1,8 +1,6 @@
 package com.electoral.electoral_api.dto;
-
 import lombok.Getter;
 import lombok.Setter;
-
 import java.util.UUID;
 
 @Getter
@@ -13,5 +11,5 @@ public class QuestionDTO {
     private String topic;
     private String tone;
     private String format;
-    private Integer optionSetId;
+    private Short optionSet;
 }
