@@ -1,13 +1,9 @@
 package com.electoral.electoral_api.service;
 
-import com.electoral.electoral_api.entity.OptionSetItem;
 import com.electoral.electoral_api.entity.Question;
-import com.electoral.electoral_api.entity.catalog.CatQuestionFormat;
-import com.electoral.electoral_api.entity.catalog.CatQuestionTopic;
 import com.electoral.electoral_api.repository.OptionSetItemRepository;
 import com.electoral.electoral_api.repository.QuestionRepository;
 import com.electoral.electoral_api.dto.QuestionDTO;
-import com.electoral.electoral_api.dto.OptionSetItemDTO;
 import com.electoral.electoral_api.specification.QuestionSpecification;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -18,12 +14,9 @@ import java.util.stream.Collectors;
 public class QuestionService {
 
     private final QuestionRepository questionRepository;
-    private final OptionSetItemRepository optionSetItemRepository;
 
-    public QuestionService(QuestionRepository questionRepository,
-                           OptionSetItemRepository optionSetItemRepository) {
+    public QuestionService(QuestionRepository questionRepository) {
         this.questionRepository = questionRepository;
-        this.optionSetItemRepository = optionSetItemRepository;
     }
 
     public List<QuestionDTO> getQuestions(Integer limit, Short formatId, Short toneId, List<Short> topicIds) {
